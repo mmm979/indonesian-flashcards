@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>インドネシア語フラッシュカード</title>
+  <style>
+    :root {
+      --bg: #f7f5f0;
+      --surface: #ffffff;
+      --primary: #cc0001;   /* インドネシア国旗 赤 */
+      --text: #1a1a1a;
+      --muted: #888;
+      --border: #e0e0e0;
+      --green: #27ae60;
+      --shadow: 0 2px 16px rgba(0,0,0,0.09);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header h1 span { opacity: 0.7; font-weight: 400; font-size: 0.85rem; margin-left: 8px; }
+    .header-count { font-size: 0.82rem; opacity: 0.8; }
+
+    /* MAIN */
+    main { max-width: 640px; margin: 0 auto; padding: 28px 16px; }
+
+    /* PROGRESS */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 3px;
+      transition: width 0.4s;
+    }
+    .progress-label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+
+    /* CARD */
+    .card-wrap {
+      perspective: 1000px;
+      height: 300px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+    }
+    .card-inner.flipped { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 28px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .card-front {
+      background: var(--surface);
+      border: 2px solid var(--border);
+    }
+    .card-back {
+      background: var(--primary);
+      color: white;
+      transform: rotateY(180deg);
+    }
+
+    .card-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.45;
+      margin-bottom: 14px;
+    }
+    .card-text {
+      font-size: 1.7rem;
+      font-weight: 700;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+    .card-hint {
+      font-size: 0.78rem;
+      opacity: 0.4;
+      margin-top: 10px;
+    }
+
+    /* 音声ボタン（表面） */
+    .audio-btn {
+      margin-top: 12px;
+      background: none;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      width: 42px; height: 42px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .audio-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .audio-btn.playing { border-color: var(--primary); color: var(--primary); background: #fff0f0; }
+
+    /* 引用リンク（裏面） */
+    .attribution {
+      margin-top: 16px;
+      font-size: 0.72rem;
+      opacity: 0.65;
+      display: flex;
+      gap: 12px;
+    }
+    .attribution a {
+      color: white;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .attribution a:hover { opacity: 0.8; }
+
+    /* NAV */
+    .nav-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .nav-btn {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      box-shadow: var(--shadow);
+    }
+    .nav-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .nav-counter { font-size: 0.9rem; color: var(--muted); min-width: 80px; text-align: center; }
+
+    /* ACTION */
+    .action-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+    .action-btn {
+      flex: 1;
+      max-width: 180px;
+      padding: 11px 0;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    .action-btn:hover { opacity: 0.82; }
+    .btn-again { background: #fde8e8; color: #c0392b; }
+    .btn-good  { background: #e8f5e9; color: var(--green); }
+
+    /* SHORTCUT HINT */
+    .shortcut-hint {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #bbb;
+      margin-top: -12px;
+    }
+
+    /* NO DATA */
+    .message-box {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+    .message-box h2 { font-size: 1.1rem; margin-bottom: 12px; color: var(--text); }
+    .message-box p  { font-size: 0.88rem; line-height: 1.7; }
+    .cmd-block {
+      background: #1e1e1e;
+      color: #9cdcfe;
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: left;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      margin: 12px 0;
+    }
+    .tatoeba-credit {
+      margin-top: 24px;
+      font-size: 0.75rem;
+      color: #bbb;
+    }
+    .tatoeba-credit a { color: #bbb; }
+
+    @media (max-width: 480px) {
+      .card-text { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🇮🇩 インドネシア語練習 <span>Tatoeba</span></h1>
+  <div class="header-count" id="header-count"></div>
+</header>
+
+<main>
+  <div id="app" style="display:none">
+    <!-- 進捗バー -->
+    <div class="progress-row">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-label" id="progress-label">0 / 0 完了</div>
+    </div>
+
+    <!-- フラッシュカード -->
+    <div class="card-wrap" id="card-wrap" onclick="flipCard()">
+      <div class="card-inner" id="card-inner">
+
+        <!-- 表面: インドネシア語 -->
+        <div class="card-face card-front">
+          <div class="card-label">インドネシア語</div>
+          <div class="card-text" id="front-text">—</div>
+          <button class="audio-btn" id="audio-btn"
+                  onclick="event.stopPropagation(); playAudio()"
+                  title="発音を聞く (P)">🔊</button>
+          <div class="card-hint">タップして日本語訳を見る</div>
+        </div>
+
+        <!-- 裏面: 日本語 -->
+        <div class="card-face card-back">
+          <div class="card-label" style="opacity:0.55">日本語訳</div>
+          <div class="card-text" id="back-text">—</div>
+          <div class="attribution" id="attribution"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ナビゲーション -->
+    <div class="nav-row">
+      <button class="nav-btn" id="btn-prev" onclick="prevCard()" title="前 (←)">◀</button>
+      <div class="nav-counter" id="nav-counter">1 / 0</div>
+      <button class="nav-btn" id="btn-next" onclick="nextCard()" title="次 (→)">▶</button>
+    </div>
+
+    <!-- 覚えた / もう一度 -->
+    <div class="action-row">
+      <button class="action-btn btn-again" onclick="markAgain()">↩ もう一度</button>
+      <button class="action-btn btn-good"  onclick="markGood()">✓ 覚えた！</button>
+    </div>
+
+    <div class="shortcut-hint">
+      キーボード: Space でめくる　← → で移動　P で発音　G で覚えた　R でもう一度
+    </div>
+  </div>
+
+  <!-- データなし -->
+  <div id="no-data" class="message-box" style="display:none">
+    <h2>データがありません</h2>
+    <p>まず以下のコマンドを実行して<br>インドネシア語データを取得してください:</p>
+    <div class="cmd-block">
+      cd C:\Users\hayat\indonesian-flashcards<br>
+      python fetch_data.py
+    </div>
+    <p>その後 <code>data/data.json</code> をGitHubにpushすると<br>このアプリで使えるようになります。</p>
+    <div class="tatoeba-credit">
+      データ: <a href="https://tatoeba.org" target="_blank">Tatoeba</a> (CC BY 2.0)
+    </div>
+  </div>
+</main>
+
+<script>
+// ================================================================
+// 状態
+// ================================================================
+let cards = [];
+let idx   = 0;
+let isFlipped = false;
+let progress  = {};   // { ind_id: 'learned' | 'again' }
+let currentAudio = null;
+
+// ================================================================
+// データ読み込み
+// ================================================================
+async function loadData() {
+  try {
+    const resp = await fetch('data/data.json');
+    if (!resp.ok) throw new Error();
+    cards = await resp.json();
+    if (!cards.length) throw new Error();
+    loadProgress();
+    renderCard();
+    document.getElementById('app').style.display     = 'block';
+    document.getElementById('no-data').style.display = 'none';
+    document.getElementById('header-count').textContent = `${cards.length} フレーズ`;
+  } catch {
+    document.getElementById('no-data').style.display = 'block';
+  }
+}
+
+// ================================================================
+// 進捗
+// ================================================================
+function loadProgress() {
+  const s = localStorage.getItem('ind_progress');
+  progress = s ? JSON.parse(s) : {};
+}
+function saveProgress() {
+  localStorage.setItem('ind_progress', JSON.stringify(progress));
+  updateProgress();
+}
+function updateProgress() {
+  const done = cards.filter(c => progress[c.ind_id] === 'learned').length;
+  const pct  = cards.length ? done / cards.length * 100 : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${done} / ${cards.length} 完了`;
+}
+
+// ================================================================
+// カード描画
+// ================================================================
+function renderCard() {
+  if (!cards.length) return;
+  const c = cards[idx];
+
+  document.getElementById('card-inner').classList.remove('flipped');
+  isFlipped = false;
+
+  document.getElementById('front-text').textContent = c.ind;
+  document.getElementById('back-text').textContent  = c.jpn;
+
+  // 引用リンク
+  document.getElementById('attribution').innerHTML =
+    `出典: <a href="${c.ind_url}" target="_blank" rel="noopener">インドネシア語文</a>` +
+    ` / <a href="${c.jpn_url}" target="_blank" rel="noopener">日本語訳</a>` +
+    ` — Tatoeba (CC BY 2.0)`;
+
+  // ナビ
+  document.getElementById('nav-counter').textContent = `${idx + 1} / ${cards.length}`;
+  document.getElementById('btn-prev').disabled = idx === 0;
+  document.getElementById('btn-next').disabled = idx === cards.length - 1;
+
+  // 覚えたカードはやや薄く
+  document.getElementById('card-wrap').style.opacity =
+    progress[c.ind_id] === 'learned' ? '0.65' : '1';
+
+  updateProgress();
+}
+
+// ================================================================
+// カード操作
+// ================================================================
+function flipCard() {
+  const ci = document.getElementById('card-inner');
+  isFlipped = !isFlipped;
+  ci.classList.toggle('flipped', isFlipped);
+}
+function prevCard() { if (idx > 0)             { idx--; renderCard(); } }
+function nextCard() { if (idx < cards.length-1){ idx++; renderCard(); } }
+
+function markGood() {
+  if (!cards.length) return;
+  progress[cards[idx].ind_id] = 'learned';
+  saveProgress();
+  nextCard();
+}
+function markAgain() {
+  if (!cards.length) return;
+  progress[cards[idx].ind_id] = 'again';
+  saveProgress();
+  nextCard();
+}
+
+// ================================================================
+// 音声 (Web Speech API)
+// ================================================================
+function playAudio() {
+  if (!cards.length) return;
+  if (!window.speechSynthesis) {
+    alert('このブラウザは音声合成に対応していません。\nChromeまたはEdgeをお使いください。');
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const btn = document.getElementById('audio-btn');
+  btn.classList.add('playing');
+
+  const utter = new SpeechSynthesisUtterance(cards[idx].ind);
+  utter.lang  = 'id-ID';
+  utter.rate  = 0.9;
+  utter.onend = () => btn.classList.remove('playing');
+  utter.onerror = () => btn.classList.remove('playing');
+
+  window.speechSynthesis.speak(utter);
+}
+
+// ================================================================
+// キーボードショートカット
+// ================================================================
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case ' ':          e.preventDefault(); flipCard();  break;
+    case 'ArrowLeft':  prevCard();                      break;
+    case 'ArrowRight': nextCard();                      break;
+    case 'p': case 'P': playAudio();                   break;
+    case 'g': case 'G': markGood();                    break;
+    case 'r': case 'R': markAgain();                   break;
+  }
+});
+
+// ================================================================
+// 起動
+// ================================================================
+loadData();
+</script>
+
+</body>
+</html>
