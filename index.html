@@ -138,7 +138,7 @@
     .audio-btn:hover { border-color: var(--primary); color: var(--primary); }
     .audio-btn.playing { border-color: var(--primary); color: var(--primary); background: #fff0f0; }
 
-    /* 引用リンク（裏面） */
+    /* 引用リンク（裏面: 赤背景） */
     .attribution {
       margin-top: 16px;
       font-size: 0.72rem;
@@ -152,6 +152,21 @@
       text-underline-offset: 2px;
     }
     .attribution a:hover { opacity: 0.8; }
+
+    /* 引用リンク（表面: 白背景） */
+    .attribution-front {
+      margin-top: 12px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+    }
+    .attribution-front a {
+      color: var(--muted);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .attribution-front a:hover { color: var(--primary); }
 
     /* NAV */
     .nav-row {
@@ -198,6 +213,28 @@
     .action-btn:hover { opacity: 0.82; }
     .btn-again { background: #fde8e8; color: #c0392b; }
     .btn-good  { background: #e8f5e9; color: var(--green); }
+
+    /* SHUFFLE */
+    .shuffle-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .shuffle-btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .shuffle-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .shuffle-btn.active { border-color: var(--primary); background: #fff0f0; color: var(--primary); }
 
     /* SHORTCUT HINT */
     .shortcut-hint {
@@ -259,20 +296,25 @@
     <div class="card-wrap" id="card-wrap" onclick="flipCard()">
       <div class="card-inner" id="card-inner">
 
-        <!-- 表面: インドネシア語 -->
+        <!-- 表面 -->
         <div class="card-face card-front">
-          <div class="card-label">インドネシア語</div>
+          <div class="card-label" id="front-label">インドネシア語</div>
           <div class="card-text" id="front-text">—</div>
-          <button class="audio-btn" id="audio-btn"
+          <button class="audio-btn" id="audio-btn-front"
                   onclick="event.stopPropagation(); playAudio()"
                   title="発音を聞く (P)">🔊</button>
-          <div class="card-hint">タップして日本語訳を見る</div>
+          <div class="attribution-front" id="attribution-front"></div>
+          <div class="card-hint" id="card-hint">タップして日本語訳を見る</div>
         </div>
 
-        <!-- 裏面: 日本語 -->
+        <!-- 裏面 -->
         <div class="card-face card-back">
-          <div class="card-label" style="opacity:0.55">日本語訳</div>
+          <div class="card-label" id="back-label" style="opacity:0.55">日本語訳</div>
           <div class="card-text" id="back-text">—</div>
+          <button class="audio-btn" id="audio-btn-back"
+                  onclick="event.stopPropagation(); playAudio()"
+                  title="発音を聞く (P)"
+                  style="display:none; border-color:rgba(255,255,255,0.5); color:white; margin-top:12px;">🔊</button>
           <div class="attribution" id="attribution"></div>
         </div>
 
@@ -284,6 +326,18 @@
       <button class="nav-btn" id="btn-prev" onclick="prevCard()" title="前 (←)">◀</button>
       <div class="nav-counter" id="nav-counter">1 / 0</div>
       <button class="nav-btn" id="btn-next" onclick="nextCard()" title="次 (→)">▶</button>
+    </div>
+
+    <!-- モード切替 -->
+    <div class="shuffle-row">
+      <button class="shuffle-btn" id="btn-mode-normal" onclick="setMode(false)" style="border-color:var(--primary);background:#fff0f0;color:var(--primary);">🇮🇩→🇯🇵 通常モード</button>
+      <button class="shuffle-btn" id="btn-mode-reverse" onclick="setMode(true)">🇯🇵→🇮🇩 逆モード</button>
+    </div>
+
+    <!-- シャッフル -->
+    <div class="shuffle-row">
+      <button class="shuffle-btn" id="btn-shuffle" onclick="shuffleCards()">🔀 シャッフル</button>
+      <button class="shuffle-btn" id="btn-reset-order" onclick="resetOrder()">🔁 順番を戻す</button>
     </div>
 
     <!-- 覚えた / もう一度 -->
@@ -317,8 +371,10 @@
 // 状態
 // ================================================================
 let cards = [];
+let originalCards = [];
 let idx   = 0;
-let isFlipped = false;
+let isFlipped  = false;
+let reverseMode = false;
 let progress  = {};   // { ind_id: 'learned' | 'again' }
 let currentAudio = null;
 
@@ -331,6 +387,7 @@ async function loadData() {
     if (!resp.ok) throw new Error();
     cards = await resp.json();
     if (!cards.length) throw new Error();
+    originalCards = [...cards];
     loadProgress();
     renderCard();
     document.getElementById('app').style.display     = 'block';
@@ -369,14 +426,31 @@ function renderCard() {
   document.getElementById('card-inner').classList.remove('flipped');
   isFlipped = false;
 
-  document.getElementById('front-text').textContent = c.ind;
-  document.getElementById('back-text').textContent  = c.jpn;
+  if (reverseMode) {
+    document.getElementById('front-label').textContent  = '日本語';
+    document.getElementById('back-label').textContent   = 'インドネシア語訳';
+    document.getElementById('front-text').textContent   = c.jpn;
+    document.getElementById('back-text').textContent    = c.ind;
+    document.getElementById('card-hint').textContent    = 'タップしてインドネシア語を見る';
+    document.getElementById('audio-btn-front').style.display = 'none';
+    document.getElementById('audio-btn-back').style.display  = 'inline-flex';
+  } else {
+    document.getElementById('front-label').textContent  = 'インドネシア語';
+    document.getElementById('back-label').textContent   = '日本語訳';
+    document.getElementById('front-text').textContent   = c.ind;
+    document.getElementById('back-text').textContent    = c.jpn;
+    document.getElementById('card-hint').textContent    = 'タップして日本語訳を見る';
+    document.getElementById('audio-btn-front').style.display = 'inline-flex';
+    document.getElementById('audio-btn-back').style.display  = 'none';
+  }
 
-  // 引用リンク
-  document.getElementById('attribution').innerHTML =
+  // 引用リンク（表裏両面）
+  const attrHtml =
     `出典: <a href="${c.ind_url}" target="_blank" rel="noopener">インドネシア語文</a>` +
     ` / <a href="${c.jpn_url}" target="_blank" rel="noopener">日本語訳</a>` +
     ` — Tatoeba (<a href="https://creativecommons.org/licenses/by/2.0/" target="_blank" rel="noopener">CC BY 2.0</a>)`;
+  document.getElementById('attribution').innerHTML       = attrHtml;
+  document.getElementById('attribution-front').innerHTML = attrHtml;
 
   // ナビ
   document.getElementById('nav-counter').textContent = `${idx + 1} / ${cards.length}`;
@@ -398,8 +472,18 @@ function flipCard() {
   isFlipped = !isFlipped;
   ci.classList.toggle('flipped', isFlipped);
 }
-function prevCard() { if (idx > 0)             { idx--; renderCard(); } }
-function nextCard() { if (idx < cards.length-1){ idx++; renderCard(); } }
+function goToCard(newIdx) {
+  if (isFlipped) {
+    document.getElementById('card-inner').classList.remove('flipped');
+    isFlipped = false;
+    setTimeout(() => { idx = newIdx; renderCard(); }, 450);
+  } else {
+    idx = newIdx;
+    renderCard();
+  }
+}
+function prevCard() { if (idx > 0)              goToCard(idx - 1); }
+function nextCard() { if (idx < cards.length-1) goToCard(idx + 1); }
 
 function markGood() {
   if (!cards.length) return;
@@ -407,6 +491,41 @@ function markGood() {
   saveProgress();
   nextCard();
 }
+function setMode(reverse) {
+  reverseMode = reverse;
+  document.getElementById('btn-mode-normal').classList.toggle('active', !reverse);
+  document.getElementById('btn-mode-reverse').classList.toggle('active', reverse);
+  document.getElementById('btn-mode-normal').style.borderColor = reverse ? '' : 'var(--primary)';
+  document.getElementById('btn-mode-normal').style.background  = reverse ? '' : '#fff0f0';
+  document.getElementById('btn-mode-normal').style.color       = reverse ? '' : 'var(--primary)';
+  document.getElementById('btn-mode-reverse').style.borderColor = reverse ? 'var(--primary)' : '';
+  document.getElementById('btn-mode-reverse').style.background  = reverse ? '#fff0f0' : '';
+  document.getElementById('btn-mode-reverse').style.color       = reverse ? 'var(--primary)' : '';
+  idx = 0;
+  renderCard();
+}
+
+function shuffleCards() {
+  const arr = [...cards];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  cards = arr;
+  idx = 0;
+  document.getElementById('btn-shuffle').classList.add('active');
+  document.getElementById('btn-reset-order').classList.remove('active');
+  renderCard();
+}
+function resetOrder() {
+  cards = [...originalCards];
+  idx = 0;
+  document.getElementById('btn-reset-order').classList.add('active');
+  document.getElementById('btn-shuffle').classList.remove('active');
+  renderCard();
+  setTimeout(() => document.getElementById('btn-reset-order').classList.remove('active'), 800);
+}
+
 function markAgain() {
   if (!cards.length) return;
   progress[cards[idx].ind_id] = 'again';
@@ -426,14 +545,16 @@ function playAudio() {
 
   window.speechSynthesis.cancel();
 
-  const btn = document.getElementById('audio-btn');
-  btn.classList.add('playing');
+  const activeBtn = reverseMode
+    ? document.getElementById('audio-btn-back')
+    : document.getElementById('audio-btn-front');
+  activeBtn.classList.add('playing');
 
   const utter = new SpeechSynthesisUtterance(cards[idx].ind);
   utter.lang  = 'id-ID';
   utter.rate  = 0.9;
-  utter.onend = () => btn.classList.remove('playing');
-  utter.onerror = () => btn.classList.remove('playing');
+  utter.onend   = () => activeBtn.classList.remove('playing');
+  utter.onerror = () => activeBtn.classList.remove('playing');
 
   window.speechSynthesis.speak(utter);
 }

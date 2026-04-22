@@ -10,7 +10,6 @@ import csv
 import json
 import os
 import io
-import sys
 
 OUT_PATH   = os.path.join(os.path.dirname(__file__), "data", "data.json")
 CACHE_DIR  = os.path.join(os.path.dirname(__file__), "data", "_cache")
@@ -115,8 +114,10 @@ def main():
         ind_text = ind_sentences[ind_id]
         jpn_text = jpn_sentences[jpn_id]
 
-        # 長さフィルター
+        # 長さフィルター・2単語以上
         if not (MIN_LEN <= len(ind_text) <= MAX_LEN):
+            continue
+        if len(ind_text.split()) < 2:
             continue
 
         pairs.append({
